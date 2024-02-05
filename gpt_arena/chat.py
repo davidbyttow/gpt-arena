@@ -1,11 +1,56 @@
 import argparse
+import json
 
 import yaml
 from config import env
 from openai import OpenAI
+from openai.types.chat import ChatCompletionToolParam
+from pydantic import BaseModel
+from termcolor import colored
 from text import print_messages
 
 gpt = OpenAI(api_key=env.get("OPENAI_API_KEY"))
+
+
+def load_text_file(file: str) -> str:
+    with open(file, "r", encoding="utf-8") as file:
+        return file.read()
+    return ""
+
+
+def load_json_file(file: str) -> any:
+    with open(file, "r", encoding="utf-8") as file:
+        return json.load(file)
+    return {}
+
+
+class Hyper(BaseModel):
+    model: str = "gpt-4"
+    temperature: float = 0.0
+
+
+class PromptVars(BaseModel):
+    def __init__(self, **data):
+        if "systemPromptFile" in data and data["systemPromptFile"] is not None:
+            data["systemPrompt"] = load_text_file(data["systemPromptFile"])
+        if "userPromptFile" in data and data["userPromptFile"] is not None:
+            data["userPrompt"] = load_text_file(data["userPromptFile"])
+        if "toolsFile" in data and data["toolsFile"] is not None:
+            data["tools"] = load_json_file(data["toolsFile"]).get("tools", [])
+        super().__init__(**data)
+
+    systemPrompt: str | None = None
+    userPrompt: str | None = None
+    tools: list[dict] | None = []
+    systemPromptFile: str | None = None
+    userPromptFile: str | None = None
+    toolsFile: str | None = None
+
+
+class Config(BaseModel):
+    prompt: PromptVars = PromptVars()
+    vars: dict = {}
+    hyper: Hyper = Hyper()
 
 
 def render_template(template: str, vars: dict) -> str:
@@ -16,30 +61,42 @@ def render_template(template: str, vars: dict) -> str:
     return template
 
 
-def perform_chat(
-    config: dict, prompt: str | None = None, system_prompt: str | None = None
-):
-    vars: dict = config.get("vars", {})
-    hypers: dict = config.get("hypers", {})
+def perform_chat(config: Config):
+    vars = config.vars
+    hyper = config.hyper
+    system_prompt: str = config.prompt.systemPrompt
+    user_prompt: str = config.prompt.userPrompt
+    tools_defs: list[dict] = config.prompt.tools
 
     messages: list[str] = []
     if system_prompt:
         content = render_template(system_prompt, vars)
         messages.append({"role": "system", "content": content})
-    if prompt:
-        content = render_template(prompt, vars)
+    if user_prompt:
+        content = render_template(user_prompt, vars)
         messages.append({"role": "user", "content": content})
 
-    print_messages(messages)
+    tools = None
+    if len(tools_defs) > 0:
+        tools = [
+            ChatCompletionToolParam(function=x, type="function") for x in tools_defs
+        ]
 
     response = gpt.chat.completions.create(
-        model=hypers.get("model", "gpt-4"),
         messages=messages,
-        temperature=0,
+        model=hyper.model,
+        temperature=hyper.temperature,
+        tools=tools,
     )
 
+    if response.choices[0].message.tool_calls:
+        for tool_call in response.choices[0].message.tool_calls:
+            name = tool_call.function.name
+            args = tool_call.function.arguments
+            print(colored(f"{name}({args})", "yellow"))
+
     if response.choices[0].message.content:
-        print(f"Response:\n{response.choices[0].message.content}")
+        print(colored(f"Response:\n{response.choices[0].message.content}", "yellow"))
 
 
 if __name__ == "__main__":
@@ -50,23 +107,7 @@ if __name__ == "__main__":
         type=argparse.FileType("r", encoding="UTF-8"),
         required=False,
     )
-    parser.add_argument(
-        "-p",
-        "--prompt-file",
-        type=argparse.FileType("r", encoding="UTF-8"),
-        required=False,
-    )
-    parser.add_argument(
-        "-s",
-        "--system-file",
-        type=argparse.FileType("r", encoding="UTF-8"),
-        required=True,
-    )
-
     args = parser.parse_args()
-
-    config = yaml.safe_load(args.config_file)
-    prompt = args.prompt_file.read() if args.prompt_file else None
-    system_prompt = args.system_file.read() if args.system_file else None
-
-    perform_chat(config=config, prompt=prompt, system_prompt=system_prompt)
+    config = Config.model_validate(yaml.safe_load(args.config_file))
+    print(config)
+    perform_chat(config=config)

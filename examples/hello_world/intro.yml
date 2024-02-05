@@ -1,0 +1,10 @@
+hyper:
+  model: gpt-4
+
+prompt:
+  systemPromptFile: examples/hello_world/system.txt
+  userPromptFile: examples/hello_world/user.txt
+  toolsFile: examples/hello_world/tools.json
+
+vars:
+  message: Hello, world

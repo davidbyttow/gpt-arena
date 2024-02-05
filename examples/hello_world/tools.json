@@ -1,0 +1,24 @@
+{
+  "tools": [
+    {
+      "name": "say",
+      "description": "Speaks a message to the user",
+      "parameters": {
+        "type": "object",
+        "required": ["message"],
+        "properties": {
+          "message": {
+            "type": "string",
+            "properties": {},
+            "description": "The message to speak to the user"
+          },
+          "joke": {
+            "type": "string",
+            "properties": {},
+            "description": "An optional joke to tell to the user"
+          }
+        }
+      }
+    }
+  ]
+}
