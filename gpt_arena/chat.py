@@ -7,7 +7,6 @@ from openai import OpenAI
 from openai.types.chat import ChatCompletionToolParam
 from pydantic import BaseModel
 from termcolor import colored
-from text import print_messages
 
 gpt = OpenAI(api_key=env.get("OPENAI_API_KEY"))
 
