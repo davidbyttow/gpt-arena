@@ -41,7 +41,7 @@ gen_letters_function = json.loads(
 gpt = OpenAI(api_key=env.get("OPENAI_API_KEY"))
 
 
-def gen_letters(target):
+def gen_letters(target: str) -> list[str]:
     messages = [
         {"role": "system", "content": gen_letters_system_prompt},
         {"role": "user", "content": f"Target: {target}"},
@@ -50,7 +50,7 @@ def gen_letters(target):
     response = gpt.chat.completions.create(
         messages=messages,
         model="gpt-4",
-        temperature=0,
+        temperature=0.5,
         tools=tools,
     )
     tool_calls = response.choices[0].message.tool_calls
@@ -59,7 +59,7 @@ def gen_letters(target):
     return list(args.get("letters").lower())
 
 
-def gen_scramble(target):
+def gen_scramble(target: str) -> list[str]:
     new_letters = gen_letters(target)
     letters = list(target.lower()) + new_letters
     random.shuffle(letters)

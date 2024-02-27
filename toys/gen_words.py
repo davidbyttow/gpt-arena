@@ -43,7 +43,7 @@ gen_words_function = json.loads(
 gpt = OpenAI(api_key=env.get("OPENAI_API_KEY"))
 
 
-def gen_words(target):
+def gen_words(target: str) -> list[str]:
     messages = [
         {"role": "system", "content": gen_words_system_prompt},
         {"role": "user", "content": f"Target: {target}"},
@@ -52,7 +52,7 @@ def gen_words(target):
     response = gpt.chat.completions.create(
         messages=messages,
         model="gpt-4",
-        temperature=0,
+        temperature=0.5,
         tools=tools,
     )
     tool_calls = response.choices[0].message.tool_calls

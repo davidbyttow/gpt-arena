@@ -45,7 +45,7 @@ gen_word_function = json.loads(
 gpt = OpenAI(api_key=env.get("OPENAI_API_KEY"))
 
 
-def gen_target():
+def gen_target() -> str:
     messages = [
         {"role": "system", "content": gen_word_system_prompt},
         {"role": "user", "content": f"Generate a new word please"},

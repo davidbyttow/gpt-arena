@@ -1,6 +1,6 @@
-from toys.gen_words import gen_words
-from toys.gen_letters import gen_letters, gen_scramble
+from toys.gen_letters import gen_scramble
 from toys.gen_target import gen_target
+from toys.gen_words import gen_words
 
 
 def main():
